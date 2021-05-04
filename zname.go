@@ -8,33 +8,58 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/route53/types"
 )
 
-type Client struct {
-	ctx     context.Context
-	route53 *route53.Client
+type ZonesAPI interface {
+	ListHostedZones(context.Context, *route53.ListHostedZonesInput, ...func(*route53.Options)) (*route53.ListHostedZonesOutput, error)
 }
 
-func New() (*Client, error) {
+type RecordsAPI interface {
+	ListResourceRecordSets(context.Context, *route53.ListResourceRecordSetsInput, ...func(*route53.Options)) (*route53.ListResourceRecordSetsOutput, error)
+}
+
+type Client struct {
+	ctx        context.Context
+	zonesAPI   ZonesAPI
+	recordsAPI RecordsAPI
+}
+
+func NewFromConfig() (*Client, error) {
 	ctx := context.TODO()
 	cfg, err := config.LoadDefaultConfig(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	return &Client{
-		ctx:     ctx,
-		route53: route53.NewFromConfig(cfg),
-	}, nil
-
+	client := route53.NewFromConfig(cfg)
+	return New(client, client), nil
 }
 
-func (c *Client) GetZones() ([]types.HostedZone, error) {
-	zones := make([]types.HostedZone, 0)
+func New(zonesAPI ZonesAPI, recordsAPI RecordsAPI) *Client {
+	return &Client{
+		ctx:        context.TODO(),
+		zonesAPI:   zonesAPI,
+		recordsAPI: recordsAPI,
+	}
+}
+
+type Zone struct {
+	ID   string
+	Name string
+}
+
+type Record struct {
+	Name   string
+	Type   string
+	Target string
+}
+
+func (c *Client) GetZones() ([]Zone, error) {
+	zones := make([]Zone, 0)
 
 	params := &route53.ListHostedZonesInput{}
 
 	var nextPage = true
 	for nextPage {
-		response, err := c.route53.ListHostedZones(c.ctx, params)
+		response, err := c.zonesAPI.ListHostedZones(c.ctx, params)
 		if err != nil {
 			return nil, err
 		}
@@ -42,14 +67,21 @@ func (c *Client) GetZones() ([]types.HostedZone, error) {
 		params.Marker = response.NextMarker
 		nextPage = response.IsTruncated
 
-		zones = append(zones, response.HostedZones...)
+		for _, hostedZone := range response.HostedZones {
+			zone := Zone{
+				ID:   *hostedZone.Id,
+				Name: *hostedZone.Name,
+			}
+
+			zones = append(zones, zone)
+		}
 	}
 
 	return zones, nil
 }
 
-func (c *Client) GetRecords(zoneID string) ([]types.ResourceRecordSet, error) {
-	records := make([]types.ResourceRecordSet, 0)
+func (c *Client) GetRecords(zoneID string) ([]Record, error) {
+	records := make([]Record, 0)
 
 	params := &route53.ListResourceRecordSetsInput{
 		HostedZoneId: &zoneID,
@@ -57,7 +89,7 @@ func (c *Client) GetRecords(zoneID string) ([]types.ResourceRecordSet, error) {
 
 	var nextPage = true
 	for nextPage {
-		response, err := c.route53.ListResourceRecordSets(c.ctx, params)
+		response, err := c.recordsAPI.ListResourceRecordSets(c.ctx, params)
 		if err != nil {
 			return nil, err
 		}
@@ -67,8 +99,36 @@ func (c *Client) GetRecords(zoneID string) ([]types.ResourceRecordSet, error) {
 		params.StartRecordType = response.NextRecordType
 		nextPage = response.IsTruncated
 
-		records = append(records, response.ResourceRecordSets...)
+		for _, rs := range response.ResourceRecordSets {
+			if record := parseRecord(rs); record != nil {
+				records = append(records, *record)
+			}
+		}
 	}
 
 	return records, nil
+}
+
+func parseRecord(rs types.ResourceRecordSet) *Record {
+	// Ignore types other than A or CNAME
+	if rs.Type != types.RRTypeA && rs.Type != types.RRTypeCname {
+		return nil
+	}
+
+	record := &Record{
+		Name: *rs.Name,
+		Type: string(rs.Type),
+	}
+
+	if rs.AliasTarget != nil {
+		record.Target = *rs.AliasTarget.DNSName
+		return record
+	}
+
+	if rs.ResourceRecords != nil {
+		// TODO: handle multiple targets
+		record.Target = *rs.ResourceRecords[0].Value
+	}
+
+	return record
 }

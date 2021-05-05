@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"os"
 	"strconv"
 	"testing"
 
@@ -45,6 +46,12 @@ func TestAPI(t *testing.T) {
 }
 
 func TestMain(t *testing.T) {
+	err := os.Remove("sqlite.db")
+	require.NoError(t, err)
+
+	db, err := OpenOrCreate("sqlite.db")
+	require.NoError(t, err)
+
 	client, err := NewFromConfig()
 	require.NoError(t, err)
 
@@ -56,7 +63,16 @@ func TestMain(t *testing.T) {
 
 		records, err := client.GetRecords(zone.ID)
 		require.NoError(t, err)
+		zone.Records = records
 
 		fmt.Printf("\tFound %d records\n", len(records))
+
+		zone.Save(db)
+		break
 	}
+
+	foundZones, err := FindAllZones(db)
+	require.NoError(t, err)
+
+	fmt.Println(foundZones)
 }

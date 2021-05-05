@@ -41,17 +41,6 @@ func New(zonesAPI ZonesAPI, recordsAPI RecordsAPI) *Client {
 	}
 }
 
-type Zone struct {
-	ID   string
-	Name string
-}
-
-type Record struct {
-	Name   string
-	Type   string
-	Target string
-}
-
 func (c *Client) GetZones() ([]Zone, error) {
 	zones := make([]Zone, 0)
 

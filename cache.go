@@ -1,7 +1,8 @@
-package main
+package zname
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"os"
 
@@ -32,7 +33,18 @@ type Record struct {
 	ZoneID string
 }
 
-func OpenOrCreate(path string) (*gorm.DB, error) {
+func DeleteCache(path string) error {
+	err := os.Remove(path)
+
+	// Don't throw errors when trying to delete a non-existent file.
+	if errors.Is(err, os.ErrNotExist) {
+		return nil
+	}
+
+	return err
+}
+
+func OpenCache(path string) (*gorm.DB, error) {
 	if _, err := os.Stat(path); err == nil {
 		return openDB(path)
 	} else if os.IsNotExist(err) {
@@ -40,6 +52,47 @@ func OpenOrCreate(path string) (*gorm.DB, error) {
 	} else {
 		return nil, err
 	}
+}
+
+func RebuildCache(path string) error {
+	client, err := NewFromConfig()
+	if err != nil {
+		return err
+	}
+
+	err = DeleteCache(path)
+	if err != nil {
+		return err
+	}
+
+	db, err := OpenCache(path)
+	if err != nil {
+		return err
+	}
+
+	zones, err := client.GetZones()
+	if err != nil {
+		return err
+	}
+
+	for _, zone := range zones {
+		fmt.Printf("Scraping %s zone...\n", zone.Name)
+
+		records, err := client.GetRecords(zone.ID)
+		if err != nil {
+			return err
+		}
+
+		fmt.Printf("\tFound %d records\n", len(records))
+		zone.Records = records
+
+		err = zone.Save(db)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func createDB(path string) (*gorm.DB, error) {

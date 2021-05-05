@@ -1,4 +1,4 @@
-package main
+package zname
 
 import (
 	"strconv"
@@ -7,6 +7,11 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+func TestDelete(t *testing.T) {
+	err := DeleteCache("this-file-doesnt-exist")
+	assert.NoError(t, err)
+}
 
 func TestDBSaveAndLoad(t *testing.T) {
 	tests := []struct {

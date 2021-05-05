@@ -1,7 +1,10 @@
 package zname
 
 import (
-	"fmt"
+	"os"
+	"strings"
+
+	"github.com/jedib0t/go-pretty/v6/table"
 )
 
 type Config struct {
@@ -32,7 +35,29 @@ func Run(cfg *Config) error {
 		return err
 	}
 
-	fmt.Println(records)
+	printTable(records)
 
 	return nil
+}
+
+func printTable(records []Record) {
+	t := table.NewWriter()
+	t.SetOutputMirror(os.Stdout)
+	t.SetStyle(table.StyleLight)
+	t.Style().Options.SeparateColumns = false
+
+	t.AppendHeader(table.Row{"Record", "Target"})
+
+	for _, record := range records {
+		t.AppendRow(table.Row{
+			strings.TrimRight(record.Name, "."),
+			strings.TrimRight(record.Target, "."),
+		})
+	}
+	t.SortBy([]table.SortBy{
+		{Name: "Record", Mode: table.Asc},
+	})
+
+	t.AppendSeparator()
+	t.Render()
 }

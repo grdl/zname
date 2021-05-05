@@ -1,6 +1,8 @@
 package main
 
 import (
+	"database/sql"
+	"fmt"
 	"os"
 
 	"gorm.io/driver/sqlite"
@@ -77,4 +79,15 @@ func FindAllZones(db *gorm.DB) ([]Zone, error) {
 	}
 
 	return zones, nil
+}
+
+func FindByWord(db *gorm.DB, word string) ([]Record, error) {
+	var records []Record
+
+	result := db.Where("name LIKE @word OR target LIKE @word", sql.Named("word", fmt.Sprintf("%%%s%%", word))).Find(&records)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+
+	return records, nil
 }

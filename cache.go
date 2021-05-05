@@ -5,7 +5,10 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
+	"time"
 
+	"github.com/jedib0t/go-pretty/v6/progress"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -70,20 +73,45 @@ func RebuildCache(path string) error {
 		return err
 	}
 
+	fmt.Println("Building cache...")
+
 	zones, err := client.GetZones()
 	if err != nil {
 		return err
 	}
 
+	pw := progress.NewWriter()
+	pw.Style().Options.PercentFormat = "%4.1f%%"
+	pw.Style().Options.Separator = " "
+	pw.Style().Options.DoneString = "Done building cache"
+	pw.Style().Options.TimeInProgressPrecision = time.Millisecond
+	pw.SetAutoStop(true)
+
+	tracker := progress.Tracker{
+		Total: int64(len(zones)),
+		Units: progress.Units{
+			Formatter: func(value int64) string {
+				if value == 1 {
+					return fmt.Sprintf("%d zone", value)
+				}
+				return fmt.Sprintf("%d zones", value)
+			},
+		},
+	}
+
+	pw.AppendTracker(&tracker)
+
+	go pw.Render()
+
 	for _, zone := range zones {
-		fmt.Printf("Scraping %s zone...\n", zone.Name)
+		tracker.Increment(1)
+		tracker.UpdateMessage(fmt.Sprintf("grabbing zone %s", strings.TrimRight(zone.Name, ".")))
 
 		records, err := client.GetRecords(zone.ID)
 		if err != nil {
 			return err
 		}
 
-		fmt.Printf("\tFound %d records\n", len(records))
 		zone.Records = records
 
 		err = zone.Save(db)
@@ -91,6 +119,8 @@ func RebuildCache(path string) error {
 			return err
 		}
 	}
+
+	pw.Stop()
 
 	return nil
 }

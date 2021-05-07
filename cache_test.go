@@ -74,10 +74,8 @@ func TestDBSaveAndLoad(t *testing.T) {
 			db, err := openDB("file::memory:?mode=memory")
 			require.NoError(t, err)
 
-			for _, zone := range test.zones {
-				err := zone.Save(db)
-				require.NoError(t, err)
-			}
+			tx := db.Create(test.zones)
+			require.NoError(t, tx.Error)
 
 			found, err := FindAllZones(db)
 			require.NoError(t, err)
@@ -162,10 +160,8 @@ func TestFindByWord(t *testing.T) {
 			db, err := openDB("file::memory:?mode=memory")
 			require.NoError(t, err)
 
-			for _, zone := range zones {
-				err := zone.Save(db)
-				require.NoError(t, err)
-			}
+			tx := db.Create(zones)
+			require.NoError(t, tx.Error)
 
 			found, err := FindByWord(db, test.word)
 			require.NoError(t, err)

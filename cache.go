@@ -20,14 +20,14 @@ type Zone struct {
 	Records []Record
 }
 
-func (z *Zone) Save(db *gorm.DB) error {
-	result := db.Create(&z)
-	if result.Error != nil {
-		return result.Error
-	}
+// func (z *Zone) Save(db *gorm.DB) error {
+// 	result := db.Create(&z)
+// 	if result.Error != nil {
+// 		return result.Error
+// 	}
 
-	return nil
-}
+// 	return nil
+// }
 
 type Record struct {
 	Name   string `gorm:"primaryKey"`
@@ -35,6 +35,20 @@ type Record struct {
 	Target string
 	ZoneID string
 }
+
+type LoadBalancer struct {
+	Name    string `gorm:"primaryKey"`
+	DNSName string
+}
+
+// func (l *LoadBalancer) Save(db *gorm.DB) error {
+// 	result := db.Create(&l)
+// 	if result.Error != nil {
+// 		return result.Error
+// 	}
+
+// 	return nil
+// }
 
 func DeleteCache(path string) error {
 	err := os.Remove(path)
@@ -75,6 +89,16 @@ func RebuildCache(path string) error {
 
 	fmt.Println("Building cache...")
 
+	lbs, err := client.GetLoadBalancers()
+	if err != nil {
+		return err
+	}
+
+	tx := db.Create(lbs)
+	if tx.Error != nil {
+		return tx.Error
+	}
+
 	zones, err := client.GetZones()
 	if err != nil {
 		return err
@@ -114,9 +138,9 @@ func RebuildCache(path string) error {
 
 		zone.Records = records
 
-		err = zone.Save(db)
-		if err != nil {
-			return err
+		tx := db.Create(zone)
+		if tx.Error != nil {
+			return tx.Error
 		}
 	}
 
@@ -145,7 +169,7 @@ func openDB(path string) (*gorm.DB, error) {
 		return nil, err
 	}
 
-	err = db.AutoMigrate(&Zone{}, &Record{})
+	err = db.AutoMigrate(&Zone{}, &Record{}, &LoadBalancer{})
 	if err != nil {
 		return nil, err
 	}

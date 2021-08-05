@@ -1,4 +1,4 @@
-package zname
+package cache
 
 import (
 	"database/sql"
@@ -13,6 +13,45 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
+
+type Cache struct {
+	path string
+	db   *gorm.DB
+}
+
+// Open opens a cache file from a given path. If cache file doesn't exist, it creates a new one.
+// If cache file can't be opened or created, error is returned.
+func Open(path string) (*Cache, error) {
+	var db *gorm.DB
+	var err error
+
+	//db, err = openDB(path)
+	//if err != nil && os.IsNotExist(err) {
+	//	db, err = createDB(path)
+	//}
+	//
+	//if _, err = os.Stat(path); err == nil {
+	//} else if os.IsNotExist(err) {
+	//} else {
+	//	return nil, err
+	//}
+
+	if _, err = os.Stat(path); err == nil {
+		db, err = openDB(path)
+	} else if os.IsNotExist(err) {
+		db, err = createDB(path)
+	} else {
+		return nil, err
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	return &Cache{
+		path: path,
+		db:   db,
+	}, nil
+}
 
 type Zone struct {
 	ID      string
@@ -50,39 +89,18 @@ type LoadBalancer struct {
 // 	return nil
 // }
 
-func DeleteCache(path string) error {
-	err := os.Remove(path)
-
-	// Don't throw errors when trying to delete a non-existent file.
-	if errors.Is(err, os.ErrNotExist) {
-		return nil
-	}
-
-	return err
-}
-
-func OpenCache(path string) (*gorm.DB, error) {
-	if _, err := os.Stat(path); err == nil {
-		return openDB(path)
-	} else if os.IsNotExist(err) {
-		return createDB(path)
-	} else {
-		return nil, err
-	}
-}
-
-func RebuildCache(path string) error {
+func (c *Cache) Rebuild() error {
 	client, err := NewFromConfig()
 	if err != nil {
 		return err
 	}
 
-	err = DeleteCache(path)
+	err = deleteDB(c.path)
 	if err != nil {
 		return err
 	}
 
-	db, err := OpenCache(path)
+	c.db, err = openDB(c.path)
 	if err != nil {
 		return err
 	}
@@ -94,7 +112,7 @@ func RebuildCache(path string) error {
 		return err
 	}
 
-	tx := db.Create(lbs)
+	tx := c.db.Create(lbs)
 	if tx.Error != nil {
 		return tx.Error
 	}
@@ -138,7 +156,7 @@ func RebuildCache(path string) error {
 
 		zone.Records = records
 
-		tx := db.Create(zone)
+		tx := c.db.Create(zone)
 		if tx.Error != nil {
 			return tx.Error
 		}
@@ -177,10 +195,21 @@ func openDB(path string) (*gorm.DB, error) {
 	return db, err
 }
 
-func FindAllZones(db *gorm.DB) ([]Zone, error) {
+func deleteDB(path string) error {
+	err := os.Remove(path)
+
+	// Don't throw errors when trying to delete a non-existent file.
+	if errors.Is(err, os.ErrNotExist) {
+		return nil
+	}
+
+	return err
+}
+
+func (c *Cache) FindAllZones() ([]Zone, error) {
 	var zones []Zone
 
-	result := db.Preload(clause.Associations).Find(&zones)
+	result := c.db.Preload(clause.Associations).Find(&zones)
 	if result.Error != nil {
 		return nil, result.Error
 	}
@@ -188,10 +217,10 @@ func FindAllZones(db *gorm.DB) ([]Zone, error) {
 	return zones, nil
 }
 
-func FindByWord(db *gorm.DB, word string) ([]Record, error) {
+func (c *Cache) FindByWord(word string) ([]Record, error) {
 	var records []Record
 
-	result := db.Where("name LIKE @word OR target LIKE @word", sql.Named("word", fmt.Sprintf("%%%s%%", word))).Find(&records)
+	result := c.db.Where("name LIKE @word OR target LIKE @word", sql.Named("word", fmt.Sprintf("%%%s%%", word))).Find(&records)
 	if result.Error != nil {
 		return nil, result.Error
 	}

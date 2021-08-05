@@ -1,4 +1,4 @@
-package zname
+package cache
 
 import (
 	"strconv"
@@ -9,7 +9,7 @@ import (
 )
 
 func TestDelete(t *testing.T) {
-	err := DeleteCache("this-file-doesnt-exist")
+	err := deleteDB("this-file-doesnt-exist")
 	assert.NoError(t, err)
 }
 
@@ -74,10 +74,14 @@ func TestDBSaveAndLoad(t *testing.T) {
 			db, err := openDB("file::memory:?mode=memory")
 			require.NoError(t, err)
 
-			tx := db.Create(test.zones)
+			c := &Cache{
+				db: db,
+			}
+
+			tx := c.db.Create(test.zones)
 			require.NoError(t, tx.Error)
 
-			found, err := FindAllZones(db)
+			found, err := c.FindAllZones()
 			require.NoError(t, err)
 
 			assert.Equal(t, test.zones, found)
@@ -160,10 +164,14 @@ func TestFindByWord(t *testing.T) {
 			db, err := openDB("file::memory:?mode=memory")
 			require.NoError(t, err)
 
-			tx := db.Create(zones)
+			c := &Cache{
+				db: db,
+			}
+
+			tx := c.db.Create(zones)
 			require.NoError(t, tx.Error)
 
-			found, err := FindByWord(db, test.word)
+			found, err := c.FindByWord(test.word)
 			require.NoError(t, err)
 
 			assert.Len(t, test.want, len(found))

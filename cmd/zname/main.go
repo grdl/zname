@@ -1,47 +1,66 @@
 package main
 
 import (
-	"flag"
 	"fmt"
-	"os"
 	"path/filepath"
 	"zname"
+
+	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
-const (
-	defaultCacheFile = ".zname.cache"
-	cachePathEnv     = "ZNAME_CACHE"
-)
-
-var rebuildCache = flag.Bool("r", false, "Rebuild cache")
-
-func main() {
-	cfg := parseFlags()
-
-	if err := zname.Run(cfg); err != nil {
-		fmt.Println(err.Error())
-		os.Exit(1)
-	}
+var cmd = &cobra.Command{
+	Use:           "zname",
+	Short:         "Sample application",
+	Version:       zname.Version(),
+	Args:          cobra.ExactArgs(1),
+	Run:           run,
+	SilenceErrors: true, // We check for errors explicitly with cobra.CheckErr()
+	SilenceUsage:  true, // We don't want to show usage on legit errors
 }
 
-func parseFlags() *zname.Config {
-	flag.Parse()
+// vip is a local instance of Viper available only inside main package. We don't want a global variable.
+var vip = viper.New()
 
-	var cachePath string
-	if path, ok := os.LookupEnv(cachePathEnv); !ok {
-		homeDir, err := os.UserHomeDir()
-		if err != nil {
-			cachePath = defaultCacheFile
-		} else {
-			cachePath = filepath.Join(homeDir, defaultCacheFile)
-		}
-	} else {
-		cachePath = path
+func init() {
+	cmd.PersistentFlags().BoolP("help", "h", false, "Print this help and exit")
+	cmd.PersistentFlags().BoolP("version", "v", false, "Print version and exit")
+	cmd.PersistentFlags().BoolP("rebuild-cache", "r", false, "Rebuild the local cache")
+	cmd.PersistentFlags().StringP("cache-path", "p", fmt.Sprintf("~%c%s", filepath.Separator, ".zname.cache"), "Path to the local cache file")
+
+	cobra.OnInitialize(initConfig)
+}
+
+func initConfig() {
+	vip.AutomaticEnv()
+	vip.SetEnvPrefix("ZNAME")
+	vip.AddConfigPath(".")
+	vip.SetConfigName(".env")
+	vip.SetConfigType("env")
+
+	err := vip.ReadInConfig()
+	// Ignore error if config file is not found, default to env vars
+	if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
+		cobra.CheckErr(err)
 	}
 
-	return &zname.Config{
-		RebuildCache: *rebuildCache,
-		Word:         flag.Arg(0),
-		CachePath:    cachePath,
+	err = vip.BindPFlags(cmd.PersistentFlags())
+	cobra.CheckErr(err)
+}
+
+func run(_ *cobra.Command, args []string) {
+	config := &zname.Config{
+		RebuildCache: vip.GetBool("rebuild-cache"),
+		CachePath:    vip.GetString("cache-path"),
+		Word:         args[0],
 	}
+
+	app, err := zname.New(config)
+	cobra.CheckErr(err)
+
+	cobra.CheckErr(app.Run())
+}
+
+func main() {
+	cobra.CheckErr(cmd.Execute())
 }

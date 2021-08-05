@@ -2,7 +2,9 @@ package zname
 
 import (
 	"os"
+	"path/filepath"
 	"strings"
+	"zname/cache"
 
 	"github.com/jedib0t/go-pretty/v6/table"
 )
@@ -13,24 +15,47 @@ type Config struct {
 	CachePath    string
 }
 
-func Run(cfg *Config) error {
-	if cfg.RebuildCache {
-		err := RebuildCache(cfg.CachePath)
+func (c *Config) validate() error {
+	// if CachePath starts with '~', expand it to user home dir
+	if c.CachePath[0] == '~' {
+		home, err := os.UserHomeDir()
 		if err != nil {
 			return err
 		}
+
+		c.CachePath = filepath.Join(home, c.CachePath[1:])
 	}
 
-	if cfg.Word == "" {
-		return nil
+	return nil
+}
+
+type Zname struct {
+	config *Config
+}
+
+func New(config *Config) (*Zname, error) {
+	err := config.validate()
+	if err != nil {
+		return nil, err
 	}
 
-	cache, err := OpenCache(cfg.CachePath)
+	return &Zname{
+		config: config,
+	}, nil
+}
+
+func (z *Zname) Run() error {
+	c, err := cache.Open(z.config.CachePath)
 	if err != nil {
 		return err
 	}
 
-	records, err := FindByWord(cache, cfg.Word)
+	err = z.rebuildCacheIfNeeded(c)
+	if err != nil {
+		return nil
+	}
+
+	records, err := c.FindByWord(z.config.Word)
 	if err != nil {
 		return err
 	}
@@ -40,7 +65,18 @@ func Run(cfg *Config) error {
 	return nil
 }
 
-func printTable(records []Record) {
+func (z *Zname) rebuildCacheIfNeeded(c *cache.Cache) error {
+	if z.config.RebuildCache {
+		err := c.Rebuild()
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func printTable(records []cache.Record) {
 	t := table.NewWriter()
 	t.SetOutputMirror(os.Stdout)
 	t.SetStyle(table.StyleLight)

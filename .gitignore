@@ -24,3 +24,6 @@ zname
 
 # Goreleaser dist directory
 dist/
+
+# sysroot dir cloned by the release GitHub action. We need to ignore it so Goreleaser won't complain about dirty git state.
+sysroot/

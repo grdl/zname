@@ -3,24 +3,50 @@ before:
     - go mod tidy
 
 builds:
-  - id: zname
+  - id: darwin-amd64
+    binary: zname
     main: ./cmd/zname/main.go
     ldflags:
       - -s -w
       - -X zname.version={{.Version}}
       - -X zname.commit={{.Commit}}
       - -X zname.date={{.Date}}
+    goos:
+      - darwin
+    goarch:
+      - amd64
     env:
-      - CGO_ENABLED=1
+      - PKG_CONFIG_SYSROOT_DIR=/sysroot/macos/amd64
+      - PKG_CONFIG_PATH=/sysroot/macos/amd64/usr/local/lib/pkgconfig
+      - CC=o64-clang
+      - CXX=o64-clang++
+
+  - id: linux-amd64
+    binary: zname
+    main: ./cmd/zname/main.go
+    ldflags:
+      - -s -w
+      - -X zname.version={{.Version}}
+      - -X zname.commit={{.Commit}}
+      - -X zname.date={{.Date}}
     goos:
       - linux
-      - darwin
-      - windows
+    goarch:
+      - amd64
+    env:
+      - CC=x86_64-linux-gnu-gcc
+      - CXX=x86_64-linux-gnu-g++
+      - CGO_FLAGS=--sysroot=/sysroot/linux/amd64
+      - CGO_LDFLAGS=--sysroot=/sysroot/linux/amd64
+      - PKG_CONFIG_SYSROOT_DIR=/sysroot/linux/amd64
+      - PKG_CONFIG_PATH=/sysroot/linux/amd64/opt/vc/lib/pkgconfig:/sysroot/linux/amd64/usr/lib/arm-linux-gnueabihf/pkgconfig:/sysroot/linux/amd64/usr/lib/pkgconfig:/sysroot/linux/amd64/usr/local/lib/pkgconfig
+
 
 archives:
   - id: archive
     builds:
-      - zname
+      - linux-amd64
+      - darwin-amd64
     replacements:
       darwin: macOS
       linux: linux

@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 	"path/filepath"
-	"zname"
+	"zname/zname"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"

@@ -21,6 +21,7 @@
 # built binaries
 main
 zname
+!zname/
 
 # Goreleaser dist directory
 dist/

@@ -20,5 +20,5 @@ func Version() string {
 		commit = commit[:6]
 	}
 
-	return fmt.Sprintf("%s - revision %s built at %s", version, commit, date)
+	return fmt.Sprintf("%s - revision %s built on %s", version, commit, date)
 }

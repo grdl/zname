@@ -8,9 +8,9 @@ builds:
     main: ./cmd/zname/main.go
     ldflags:
       - -s -w
-      - -X zname.version={{.Version}}
-      - -X zname.commit={{.Commit}}
-      - -X zname.date={{.Date}}
+      - -X zname/zname.version={{.Version}}
+      - -X zname/zname.commit={{.Commit}}
+      - -X zname/zname.date={{.Date}}
     goos:
       - darwin
     goarch:

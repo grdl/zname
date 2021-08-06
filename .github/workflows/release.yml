@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - "cgo_testing"
+    tags:
+      - "**"
 
 jobs:
   release:
@@ -17,17 +19,16 @@ jobs:
       - name: Clone Sysroot for OSXCross CGO Support
         run: |-
           git clone https://github.com/troian/golang-cross-example-sysroot.git sysroot
-      - name: Setup release environment
-        run: |-
-          echo 'GITHUB_TOKEN=${{secrets.GORELEASER_TOKEN}}' > .release-env
+#      - name: Setup release environment
+#        run: |-
+#          echo 'GITHUB_TOKEN=${{secrets.GORELEASER_TOKEN}}' > .release-env
       - name: Run GoReleaser
         run: |-
           docker run \
           	--rm \
           	--privileged \
           	-e CGO_ENABLED=1 \
-            -e TEST_SECRET=${{secrets.TEST_SECRET}} \
-          	--env-file .release-env \
+            -e GITHUB_TOKEN=${{secrets.GORELEASER_TOKEN}} \
           	-v /var/run/docker.sock:/var/run/docker.sock \
           	-v `pwd`:/go/src/github.com/grdl/zname \
           	-v `pwd`/sysroot:/sysroot \

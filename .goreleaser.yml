@@ -3,57 +3,82 @@ before:
     - go mod tidy
 
 builds:
-  - id: zname
+  - id: linux-build
     main: ./cmd/zname/main.go
-    ldflags:
-      - -s -w
-      - -X zname.version={{.Version}}
-      - -X zname.commit={{.Commit}}
-      - -X zname.date={{.Date}}
     env:
       - CGO_ENABLED=1
     goos:
       - linux
+    ignore:
+      - goos: linux
+        goarch: 386
+
+  - id: darwin-build
+    main: ./cmd/zname/main.go
+    ldflags:
+      - -s
+    env:
+      - CGO_ENABLED=1
+      - CC=/home/runner/work/osxcross/target/bin/o64-clang
+      - CXX=/home/runner/work/osxcross/target/bin/o64-clang++
+    goos:
       - darwin
-      - windows
+    ignore:
+      - goos: darwin
+        goarch: 386
 
-archives:
-  - id: archive
-    builds:
-      - zname
-    replacements:
-      darwin: macOS
-      linux: linux
-      windows: windows
-      386: i386
-      amd64: x86_64
-    format_overrides:
-      - goos: windows
-        format: zip
-    # Don't include any additional files into the archives (such as README, CHANGELOG etc).
-    files:
-      - none*
+#builds:
+#  - id: zname
+#    main: ./cmd/zname/main.go
+#    ldflags:
+#      - -s -w
+#      - -X zname.version={{.Version}}
+#      - -X zname.commit={{.Commit}}
+#      - -X zname.date={{.Date}}
+#    env:
+#      - CGO_ENABLED=1
+#    goos:
+#      - linux
+#      - darwin
+#      - windows
 
-checksum:
-  name_template: 'checksums.txt'
+#archives:
+#  - id: archive
+#    builds:
+#      - zname
+#    replacements:
+#      darwin: macOS
+#      linux: linux
+#      windows: windows
+#      386: i386
+#      amd64: x86_64
+#    format_overrides:
+#      - goos: windows
+#        format: zip
+#    # Don't include any additional files into the archives (such as README, CHANGELOG etc).
+#    files:
+#      - none*
 
-release:
-  github:
-    owner: grdl
-    name: zname
+#checksum:
+#  name_template: 'checksums.txt'
 
-brews:
-  - name: zname
-    tap:
-      owner: grdl
-      name: homebrew-tap
-    commit_author:
-      name: Greg Dlugoszewski
-      email: greg@grdl.dev
-    folder: Formula
-    homepage: https://github.com/grdl/zname/
-    description: "Zname: search through your cloud DNS records."
-    test: |
-      system "zname --version"
-    install: |
-      bin.install "zname"
+#release:
+#  github:
+#    owner: grdl
+#    name: zname
+
+#brews:
+#  - name: zname
+#    tap:
+#      owner: grdl
+#      name: homebrew-tap
+#    commit_author:
+#      name: Greg Dlugoszewski
+#      email: greg@grdl.dev
+#    folder: Formula
+#    homepage: https://github.com/grdl/zname/
+#    description: "Zname: search through your cloud DNS records."
+#    test: |
+#      system "zname --version"
+#    install: |
+#      bin.install "zname"

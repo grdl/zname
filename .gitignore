@@ -24,3 +24,6 @@ zname
 
 # Goreleaser dist directory
 dist/
+
+.release-env
+sysroot/

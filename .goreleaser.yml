@@ -3,29 +3,42 @@ before:
     - go mod tidy
 
 builds:
-  - id: linux-build
+  - id: darwin-amd64
     main: ./cmd/zname/main.go
-    env:
-      - CGO_ENABLED=1
-    goos:
-      - linux
-    ignore:
-      - goos: linux
-        goarch: 386
-
-  - id: darwin-build
-    main: ./cmd/zname/main.go
-    ldflags:
-      - -s
-    env:
-      - CGO_ENABLED=1
-      - CC=/home/runner/work/osxcross/target/bin/o64-clang
-      - CXX=/home/runner/work/osxcross/target/bin/o64-clang++
+#    binary: golang-cross
     goos:
       - darwin
-    ignore:
-      - goos: darwin
-        goarch: 386
+    goarch:
+      - amd64
+    env:
+      - PKG_CONFIG_SYSROOT_DIR=/sysroot/macos/amd64
+      - PKG_CONFIG_PATH=/sysroot/macos/amd64/usr/local/lib/pkgconfig
+      - CC=o64-clang
+      - CXX=o64-clang++
+    flags:
+      - -mod=readonly
+
+
+#  - id: linux-armhf
+#    main: ./
+#    binary: golang-cross
+#    goos:
+#      - linux
+#    goarch:
+#      - arm
+#    goarm:
+#      - 7
+#    env:
+#      - CC=arm-linux-gnueabihf-gcc
+#      - CXX=arm-linux-gnueabihf-g++
+#      - CGO_FLAGS=--sysroot=/sysroot/linux/armhf
+#      - CGO_LDFLAGS=--sysroot=/sysroot/linux/armhf
+#      - PKG_CONFIG_SYSROOT_DIR=/sysroot/linux/armhf
+#      - PKG_CONFIG_PATH=/sysroot/linux/armhf/opt/vc/lib/pkgconfig:/sysroot/linux/armhf/usr/lib/arm-linux-gnueabihf/pkgconfig:/sysroot/linux/armhf/usr/lib/pkgconfig:/sysroot/linux/armhf/usr/local/lib/pkgconfig
+#    flags:
+#      - -mod=readonly
+#    ldflags:
+#      - -s -w -X main.version={{.Version}}
 
 #builds:
 #  - id: zname

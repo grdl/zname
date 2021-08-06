@@ -18,25 +18,22 @@ builds:
     flags:
       - -mod=readonly
 
-
-#  - id: linux-armhf
-#    main: ./
+  - id: linux-amd64
+    main: ./cmd/zname/main.go
 #    binary: golang-cross
-#    goos:
-#      - linux
-#    goarch:
-#      - arm
-#    goarm:
-#      - 7
-#    env:
-#      - CC=arm-linux-gnueabihf-gcc
-#      - CXX=arm-linux-gnueabihf-g++
-#      - CGO_FLAGS=--sysroot=/sysroot/linux/armhf
-#      - CGO_LDFLAGS=--sysroot=/sysroot/linux/armhf
-#      - PKG_CONFIG_SYSROOT_DIR=/sysroot/linux/armhf
-#      - PKG_CONFIG_PATH=/sysroot/linux/armhf/opt/vc/lib/pkgconfig:/sysroot/linux/armhf/usr/lib/arm-linux-gnueabihf/pkgconfig:/sysroot/linux/armhf/usr/lib/pkgconfig:/sysroot/linux/armhf/usr/local/lib/pkgconfig
-#    flags:
-#      - -mod=readonly
+    goos:
+      - linux
+    goarch:
+      - amd64
+    env:
+      - CC=x86_64-linux-gnu-gcc
+      - CXX=x86_64-linux-gnu-g++
+      - CGO_FLAGS=--sysroot=/sysroot/linux/amd64
+      - CGO_LDFLAGS=--sysroot=/sysroot/linux/amd64
+      - PKG_CONFIG_SYSROOT_DIR=/sysroot/linux/amd64
+      - PKG_CONFIG_PATH=/sysroot/linux/amd64/opt/vc/lib/pkgconfig:/sysroot/linux/amd64/usr/lib/arm-linux-gnueabihf/pkgconfig:/sysroot/linux/amd64/usr/lib/pkgconfig:/sysroot/linux/amd64/usr/local/lib/pkgconfig
+    flags:
+      - -mod=readonly
 #    ldflags:
 #      - -s -w -X main.version={{.Version}}
 

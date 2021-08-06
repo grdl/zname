@@ -13,6 +13,10 @@ jobs:
         uses: actions/checkout@v2
       - name: Set up Go
         uses: actions/setup-go@v2
+      - name: Generate release notes
+        run: |-
+          sed -n '/^## \['${GITHUB_REF##*\/}'\]/,/^## \[/{//!p;}' CHANGELOG.md | sed -e :a -e '/^\n*$/{$d;N;};/\n$/ba' > /tmp/release_notes
+          cat /tmp/release_notes
 
       # We need to run GoReleaser inside a docker container to support cross-compiling with CGO enabled.
       # This solution is based on https://goreleaser.com/cookbooks/cgo-and-crosscompiling/
@@ -29,6 +33,7 @@ jobs:
           	-v /var/run/docker.sock:/var/run/docker.sock \
           	-v `pwd`:/go/src/github.com/grdl/zname \
           	-v `pwd`/sysroot:/sysroot \
+          	-v /tmp/release_notes:/tmp/release_notes \
           	-w /go/src/github.com/grdl/zname \
           	troian/golang-cross:v1.16.6 \
-          	release --rm-dist
+          	release --rm-dist --release-notes /tmp/release_notes

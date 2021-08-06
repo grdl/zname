@@ -10,8 +10,8 @@ import (
 )
 
 var cmd = &cobra.Command{
-	Use:           "zname",
-	Short:         "Sample application",
+	Use:           "zname <WORD>",
+	Short:         "Zname - search through your cloud DNS records.",
 	Version:       zname.Version(),
 	Args:          cobra.ExactArgs(1),
 	Run:           run,
